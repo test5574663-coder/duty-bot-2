@@ -15,15 +15,11 @@ REST
 
 const TOKEN = process.env.TOKEN;
 
-// ===== CONFIG =====
-
 const GUILD_ID = "1466476014908473550";
 const MANAGER_ROLE = "1475815959616032883";
-const INTERN_ROLE = "1467725396433834149";
-
 const WEEK_CHANNEL = "1480583086797361272";
 
-// ===== KEEP ALIVE =====
+// KEEP ALIVE
 
 const PORT = process.env.PORT || 3000;
 
@@ -35,7 +31,7 @@ https.get(process.env.RENDER_EXTERNAL_URL);
 }
 },300000);
 
-// ===== CLIENT =====
+// CLIENT
 
 const client = new Client({
 intents:[
@@ -45,7 +41,7 @@ GatewayIntentBits.GuildPresences
 ]
 });
 
-// ===== DATABASE =====
+// DATABASE
 
 const DB = "./duty.json";
 let db = {};
@@ -62,7 +58,7 @@ fs.writeFileSync(DB,JSON.stringify(db,null,2));
 
 loadDB();
 
-// ===== TIME =====
+// TIME
 
 function nowVN(){
 return new Date(
@@ -86,7 +82,7 @@ return `${Math.floor(m/60)} giờ ${m%60} phút`;
 
 }
 
-// ===== USER =====
+// USER
 
 function getUser(id){
 
@@ -96,7 +92,7 @@ return db[id];
 
 }
 
-// ===== BUILD EMBED =====
+// BUILD EMBED
 
 function buildEmbed(member,user,dayKey,status){
 
@@ -131,7 +127,7 @@ return new EmbedBuilder()
 
 `**Tên Nhân Sự :** ${member}
 
-**Biển Số :** ${day.plate||"Chưa nhập"}
+**Biển Số :** ${day.plate || "Chưa nhập"}
 
 **Thời Gian Onduty :**
 ${timeline}
@@ -148,7 +144,7 @@ ${timeline}
 
 }
 
-// ===== SEND EMBED =====
+// SEND EMBED
 
 async function sendEmbed(channel,member,user,dayKey,status){
 
@@ -163,7 +159,6 @@ if(day.messageId){
 try{
 
 const ch = await client.channels.fetch(day.channelId);
-
 const msg = await ch.messages.fetch(day.messageId);
 
 if(msg){
@@ -181,121 +176,123 @@ return;
 const msg = await channel.send({embeds:[embed]});
 
 day.messageId = msg.id;
-
 day.channelId = channel.id;
 
 saveDB();
 
 }
 
-// ===== COMMANDS =====
+// COMMANDS
 
 const commands=[
 
 new SlashCommandBuilder()
-
 .setName("onduty")
-
 .setDescription("Bắt đầu trực")
-
-.addStringOption(o=>o.setName("bienso").setDescription("Biển số").setRequired(true)),
+.addStringOption(o=>
+o.setName("bienso")
+.setDescription("Biển số xe")
+.setRequired(true)
+),
 
 new SlashCommandBuilder()
-
 .setName("offduty")
-
 .setDescription("Kết thúc trực"),
 
 new SlashCommandBuilder()
-
 .setName("thaybienso")
-
 .setDescription("Đổi biển số")
-
-.addStringOption(o=>o.setName("bienso").setDescription("Biển mới").setRequired(true)),
+.addStringOption(o=>
+o.setName("bienso")
+.setDescription("Biển số mới")
+.setRequired(true)
+),
 
 new SlashCommandBuilder()
-
 .setName("penalty")
-
 .setDescription("Cộng thời gian")
-
-.addUserOption(o=>o.setName("user").setRequired(true))
-
-.addIntegerOption(o=>o.setName("minutes").setRequired(true)),
+.addUserOption(o=>
+o.setName("user")
+.setDescription("Nhân sự")
+.setRequired(true)
+)
+.addIntegerOption(o=>
+o.setName("minutes")
+.setDescription("Số phút cộng")
+.setRequired(true)
+),
 
 new SlashCommandBuilder()
-
 .setName("adjust")
-
 .setDescription("Trừ thời gian")
-
-.addUserOption(o=>o.setName("user").setRequired(true))
-
-.addIntegerOption(o=>o.setName("minutes").setRequired(true)),
+.addUserOption(o=>
+o.setName("user")
+.setDescription("Nhân sự")
+.setRequired(true)
+)
+.addIntegerOption(o=>
+o.setName("minutes")
+.setDescription("Số phút trừ")
+.setRequired(true)
+),
 
 new SlashCommandBuilder()
-
 .setName("forced_duty")
-
 .setDescription("Cưỡng chế offduty")
-
-.addUserOption(o=>o.setName("user").setRequired(true)),
+.addUserOption(o=>
+o.setName("user")
+.setDescription("Nhân sự")
+.setRequired(true)
+),
 
 new SlashCommandBuilder()
-
 .setName("reload")
-
 .setDescription("Reload bảng duty")
-
-.addUserOption(o=>o.setName("user").setRequired(true)),
+.addUserOption(o=>
+o.setName("user")
+.setDescription("Nhân sự")
+.setRequired(true)
+),
 
 new SlashCommandBuilder()
-
 .setName("week")
-
 .setDescription("Chấm công tuần")
-
-.addUserOption(o=>o.setName("user").setRequired(true))
+.addUserOption(o=>
+o.setName("user")
+.setDescription("Nhân sự")
+.setRequired(true)
+)
 
 ].map(c=>c.toJSON());
 
-// ===== READY =====
+// READY
 
 client.once("ready",async()=>{
 
 const rest = new REST({version:"10"}).setToken(TOKEN);
 
 await rest.put(
-
 Routes.applicationGuildCommands(client.user.id,GUILD_ID),
-
 {body:[]}
-
 );
 
 await rest.put(
-
 Routes.applicationGuildCommands(client.user.id,GUILD_ID),
-
 {body:commands}
-
 );
 
 console.log("BOT READY");
 
 });
 
-// ===== COMMAND HANDLER =====
+// COMMAND HANDLER
 
 client.on("interactionCreate",async i=>{
 
 if(!i.isChatInputCommand()) return;
 
 const member = await i.guild.members.fetch(i.user.id);
-
 const user = getUser(member.id);
-
 const dayKey = dateKey();
 
 // ONDUTY
@@ -309,24 +306,17 @@ let day = user.days[dayKey];
 if(!day){
 
 day = user.days[dayKey]={
-
 plate,
-
 sessions:[],
-
 extra:0,
-
 messageId:null,
-
 channelId:null
-
 };
 
 }
 
 if(day.sessions.some(s=>!s.end))
-
-return i.reply({content:"Đang onduty",ephemeral:true});
+return i.reply({content:"Bạn đang onduty",ephemeral:true});
 
 day.plate=plate;
 
@@ -365,87 +355,5 @@ return i.reply("Đã offduty");
 }
 
 });
-
-// ===== AUTO OFF GTA =====
-
-client.on("presenceUpdate",async(oldP,newP)=>{
-
-if(!newP?.member) return;
-
-const id = newP.member.id;
-
-const user = db[id];
-
-if(!user) return;
-
-const dayKey = dateKey();
-
-const day = user.days[dayKey];
-
-if(!day) return;
-
-const playing = newP.member.presence?.activities?.some(a=>a.name?.toLowerCase().includes("gta"));
-
-if(!playing){
-
-const last = day.sessions.find(s=>!s.end);
-
-if(!last) return;
-
-last.end = Date.now();
-
-user.total += last.end-last.start;
-
-saveDB();
-
-const ch = await client.channels.fetch(day.channelId);
-
-await sendEmbed(ch,newP.member,user,dayKey,"Tự off (Thoát GTA)");
-
-}
-
-});
-
-// ===== AUTO OFF 23:59 =====
-
-setInterval(async()=>{
-
-const now = nowVN();
-
-if(now.getHours()!==23 || now.getMinutes()!==59) return;
-
-const dayKey = dateKey();
-
-for(const id in db){
-
-const user=db[id];
-
-const day=user.days[dayKey];
-
-if(!day) continue;
-
-const last = day.sessions.find(s=>!s.end);
-
-if(!last) continue;
-
-last.end=Date.now();
-
-user.total += last.end-last.start;
-
-saveDB();
-
-try{
-
-const member = await client.guilds.cache.get(GUILD_ID).members.fetch(id);
-
-const ch = await client.channels.fetch(day.channelId);
-
-await sendEmbed(ch,member,user,dayKey,"Tự off (Qua ngày)");
-
-}catch{}
-
-}
-
-},60000);
 
 client.login(TOKEN);
