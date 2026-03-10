@@ -347,6 +347,51 @@ return i.editReply("Đã offduty");
 
 });
 
+// ===== thaybienso =======
+
+if(i.commandName==="thaybienso"){
+
+const day = user.days[dayKey];
+if(!day) return i.editReply("Bạn chưa onduty");
+
+const last = day.sessions.find(s=>!s.end);
+if(!last) return i.editReply("Bạn chưa onduty");
+
+const newPlate = i.options.getString("bienso");
+
+day.plate = newPlate;
+
+saveDB();
+
+await sendOrUpdateEmbed(i.channel,member,user,dayKey,"Đang trực");
+
+return i.editReply(`Đã đổi biển số → ${newPlate}`);
+
+}
+
+// ======= Reload duty ========
+
+if(i.commandName==="reload"){
+
+if(!member.roles.cache.has(RESET_ROLE_ID))
+return i.editReply("Không có quyền");
+
+const u = i.options.getUser("user");
+
+const target = getUser(u.id);
+
+const day = target.days[dayKey];
+
+if(!day) return i.editReply("User chưa onduty hôm nay");
+
+const m = await i.guild.members.fetch(u.id);
+
+await sendOrUpdateEmbed(i.channel,m,target,dayKey,"Reload");
+
+return i.editReply(`Đã reload bảng của ${u}`);
+
+}
+
 // ===== AUTO OFF KHI THOÁT GTA =====
 
 client.on("presenceUpdate",async(oldP,newP)=>{
