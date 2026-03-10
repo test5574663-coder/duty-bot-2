@@ -195,7 +195,7 @@ client.on("interactionCreate",async i=>{
 
 if(!i.isChatInputCommand()) return;
 
-await i.deferReply({ephemeral:true});
+await i.deferReply({ ephemeral:false });
 
 const member=await i.guild.members.fetch(i.user.id);
 const user=getUser(member.id);
