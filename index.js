@@ -219,6 +219,15 @@ Routes.applicationGuildCommands(client.user.id, GUILD_ID),
 { body: [] }
 );
 
+// ĐĂNG KÝ LỆNH MỚI
+await rest.put(
+Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+{ body: commands }
+);
+
+console.log("Slash commands đã cập nhật");
+
+});
 // ===== COMMAND HANDLER =====
 client.on("interactionCreate", async i => {
 
