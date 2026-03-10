@@ -211,14 +211,13 @@ client.once("ready", async () => {
 
 const rest = new REST({ version: "10" }).setToken(TOKEN);
 
+console.log("Đang reset slash commands...");
+
+// XÓA TOÀN BỘ LỆNH CŨ
 await rest.put(
 Routes.applicationGuildCommands(client.user.id, GUILD_ID),
-{ body: commands }
+{ body: [] }
 );
-
-console.log("Bot ready");
-
-});
 
 // ===== COMMAND HANDLER =====
 client.on("interactionCreate", async i => {
