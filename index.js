@@ -158,29 +158,59 @@ new SlashCommandBuilder()
 .addStringOption(o=>o.setName("bienso").setDescription("Biển số mới").setRequired(true)),
 
 new SlashCommandBuilder()
-.setName("penalty")
-.setDescription("Cộng thời gian")
-.addUserOption(o=>o.setName("user").setRequired(true))
-.addIntegerOption(o=>o.setName("minutes").setRequired(true))
-.addStringOption(o=>o.setName("type").setRequired(true).addChoices(
-{name:"Onduty ngày",value:"day"},
-{name:"Thực tập tổng",value:"total"}
-)),
+  .setName("penalty")
+  .setDescription("Cộng thời gian")
+  .addUserOption(o =>
+    o.setName("user")
+     .setDescription("Người cần cộng")
+     .setRequired(true)
+  )
+  .addIntegerOption(o =>
+    o.setName("minutes")
+     .setDescription("Số phút")
+     .setRequired(true)
+  )
+  .addStringOption(o =>
+    o.setName("type")
+     .setDescription("Loại cộng")
+     .setRequired(true)
+     .addChoices(
+       { name: "Onduty ngày", value: "day" },
+       { name: "Thực tập tổng", value: "total" }
+     )
+  )
 
 new SlashCommandBuilder()
-.setName("adjust")
-.setDescription("Trừ thời gian")
-.addUserOption(o=>o.setName("user").setRequired(true))
-.addIntegerOption(o=>o.setName("minutes").setRequired(true))
-.addStringOption(o=>o.setName("type").setRequired(true).addChoices(
-{name:"Onduty ngày",value:"day"},
-{name:"Thực tập tổng",value:"total"}
-)),
+  .setName("adjust")
+  .setDescription("Trừ thời gian")
+  .addUserOption(o =>
+    o.setName("user")
+     .setDescription("Người cần trừ")
+     .setRequired(true)
+  )
+  .addIntegerOption(o =>
+    o.setName("minutes")
+     .setDescription("Số phút")
+     .setRequired(true)
+  )
+  .addStringOption(o =>
+    o.setName("type")
+     .setDescription("Loại trừ")
+     .setRequired(true)
+     .addChoices(
+       { name: "Onduty ngày", value: "day" },
+       { name: "Thực tập tổng", value: "total" }
+     )
+  )
 
 new SlashCommandBuilder()
-.setName("forced_duty")
-.setDescription("Cưỡng chế offduty")
-.addUserOption(o=>o.setName("user").setRequired(true)),
+  .setName("forced_duty")
+  .setDescription("Cưỡng chế offduty")
+  .addUserOption(o =>
+    o.setName("user")
+     .setDescription("User cần off")
+     .setRequired(true)
+  )
 
 new SlashCommandBuilder()
 .setName("week")
