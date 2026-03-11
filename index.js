@@ -237,14 +237,16 @@ client.on("interactionCreate", async i => {
   const user = getUser(member.id);
   const dayKey = dateKeyVN();
 
-  // ===== WEEK =====
-  if (i.commandName === "week") {
-
-    if (i.channel.id !== WEEK_CHANNEL_ID)
-      return i.reply({
-        content: "❌ Lệnh này chỉ dùng tại kênh chấm công",
-        ephemeral: true
-      });
+ // ===== CHANNEL CHECK =====
+if (
+  i.commandName !== "week" &&
+  i.channel.id !== DUTY_CHANNEL_ID
+) {
+  return i.reply({
+    content: "❌ Lệnh duty chỉ dùng tại kênh duty",
+    ephemeral: true
+  });
+}
 
     const monday = new Date(nowVN());
     const day = monday.getDay() || 7;
