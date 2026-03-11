@@ -22,7 +22,7 @@ const INTERN_ROLE_ID = "1467725396433834149";
 const DUTY_CHANNEL_ID = "1481102417272635514";
 const WEEK_CHANNEL_ID = "1481104380739584060";
 
-// ===== KEEP ALIVE RENDER =====
+// ===== KEEP ALIVE =====
 const PORT = process.env.PORT || 3000;
 http.createServer((req, res) => res.end("OK")).listen(PORT);
 
@@ -30,7 +30,7 @@ setInterval(() => {
   if (process.env.RENDER_EXTERNAL_URL) {
     https.get(process.env.RENDER_EXTERNAL_URL);
   }
-}, 5 * 60 * 1000);
+}, 300000);
 
 // ===== CLIENT =====
 const client = new Client({
@@ -55,7 +55,7 @@ function saveDB() {
 
 loadDB();
 
-// ===== TIME VN =====
+// ===== TIME =====
 function nowVN() {
   return new Date(
     new Date().toLocaleString("en-US", {
@@ -80,7 +80,7 @@ function diffText(ms) {
   return `${Math.floor(m / 60)} giờ ${m % 60} phút`;
 }
 
-// ===== USER DB =====
+// ===== USER =====
 function getUser(id) {
   if (!db[id]) db[id] = { total: 0, days: {} };
   return db[id];
@@ -88,7 +88,6 @@ function getUser(id) {
 
 // ===== EMBED =====
 function buildEmbed(member, user, dayKey, status) {
-
   const day = user.days[dayKey];
   if (!day) return null;
 
@@ -126,12 +125,11 @@ ${isIntern ? `\n**Tổng Thời Gian Thực Tập :** ${diffText(user.total)}` :
     );
 }
 
-// ===== SEND / UPDATE =====
+// ===== SEND EMBED =====
 async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
 
   const day = user.days[dayKey];
   const embed = buildEmbed(member, user, dayKey, status);
-
   if (!embed) return;
 
   if (day.messageId && day.channelId) {
@@ -147,7 +145,6 @@ async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
   }
 
   const msg = await channel.send({ embeds: [embed] });
-
   day.messageId = msg.id;
   day.channelId = channel.id;
 
@@ -170,7 +167,7 @@ new SlashCommandBuilder()
 
 new SlashCommandBuilder()
 .setName("thaybienso")
-.setDescription("Đổi biển số khi đang trực")
+.setDescription("Đổi biển số")
 .addStringOption(o =>
   o.setName("bienso").setDescription("Biển số mới").setRequired(true)
 ),
@@ -208,7 +205,9 @@ new SlashCommandBuilder()
 new SlashCommandBuilder()
 .setName("forced_duty")
 .setDescription("Cưỡng chế offduty")
-.addUserOption(o => o.setName("user").setDescription("User").setRequired(true)),
+.addUserOption(o =>
+  o.setName("user").setDescription("User").setRequired(true)
+),
 
 new SlashCommandBuilder()
 .setName("week")
@@ -264,9 +263,12 @@ client.on("interactionCreate", async i => {
       let total = 0;
 
       if (data) {
+
         data.sessions.forEach(s => {
+
           const end = s.end || Date.now();
           total += end - s.start;
+
         });
 
         if (data.extra) total += data.extra;
@@ -289,12 +291,9 @@ client.on("interactionCreate", async i => {
     return i.reply({ embeds: [embed] });
   }
 
-  // ===== DUTY CHANNEL CHECK =====
   if (i.channel.id !== DUTY_CHANNEL_ID)
-    return i.reply({
-      content: "❌ Lệnh duty chỉ dùng tại kênh duty",
-      ephemeral: true
-    });
+    return i.reply({ content: "❌ Lệnh duty chỉ dùng tại kênh duty", ephemeral: true });
 
-  // (toàn bộ logic duty của bạn giữ nguyên bên dưới)
+  // ===== CÁC LỆNH DUTY CỦA BẠN GIỮ NGUYÊN =====
 });
+client.login(TOKEN);
