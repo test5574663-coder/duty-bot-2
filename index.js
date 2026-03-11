@@ -19,14 +19,15 @@ const TOKEN = process.env.TOKEN;
 // ===== CONFIG =====
 
 const GUILD_ID = "1386213843134578779";
-const RESET_ROLE_ID = "1481107826041421874";
-const INTERN_ROLE_ID = "1467725396433834149";
+
+const DEV_ROLE_ID = "1481107826041421874";
+const INTERN_ROLE_ID = "1481107791082160260";
 
 const DUTY_CHANNEL_ID = "1481102417272635514";
 const WEEK_CHANNEL_ID = "1481104380739584060";
 
 
-// ===== KEEP ALIVE (RENDER) =====
+// ===== KEEP ALIVE =====
 
 const PORT = process.env.PORT || 3000;
 
@@ -115,11 +116,13 @@ let totalDay=0;
 const now=Date.now();
 
 day.sessions.forEach(s=>{
+
 const end=s.end||now;
 
 timeline+=`${formatTime(s.start)} ➝ ${s.end?formatTime(s.end):"..."}\n`;
 
 totalDay+=end-s.start;
+
 });
 
 if(day.extra) totalDay+=day.extra;
@@ -143,9 +146,9 @@ ${timeline||"Chưa có"}
 **Ngày Onduty :** ${dayKey}
 
 **Tổng Thời Gian Onduty :** ${diffText(totalDay)}
-${isIntern?`\n**Tổng Thời Gian Thực Tập :** ${diffText(user.total)}`:""}
+${isIntern?`\n**Tổng Thực Tập :** ${diffText(user.total)}`:""}
 
-**Trạng Thái Hoạt Động :** ${status}`
+**Trạng Thái :** ${status}`
 );
 }
 
@@ -165,7 +168,6 @@ if(day.messageId && day.channelId){
 try{
 
 const ch=await client.channels.fetch(day.channelId);
-
 const msg=await ch.messages.fetch(day.messageId);
 
 if(msg){
@@ -240,7 +242,7 @@ o.setName("type")
 ),
 
 new SlashCommandBuilder()
-.setName("forced_duty")
+.setName("forceoff")
 .setDescription("Cưỡng chế offduty")
 .addUserOption(o=>o.setName("user").setDescription("User").setRequired(true)),
 
@@ -275,7 +277,6 @@ if(!i.isChatInputCommand()) return;
 
 const member=await i.guild.members.fetch(i.user.id);
 const user=getUser(member.id);
-
 const dayKey=dateKeyVN();
 
 
@@ -287,7 +288,6 @@ if(i.channel.id!==WEEK_CHANNEL_ID)
 return i.reply({content:"❌ Chỉ dùng ở kênh week",ephemeral:true});
 
 const monday=new Date(nowVN());
-
 const day=monday.getDay()||7;
 
 monday.setDate(monday.getDate()-day+1);
@@ -297,11 +297,9 @@ let result="";
 for(let d=0;d<7;d++){
 
 const date=new Date(monday);
-
 date.setDate(monday.getDate()+d);
 
 const key=dateKeyVN(date);
-
 const data=user.days[key];
 
 let total=0;
@@ -314,6 +312,7 @@ total+=end-s.start;
 });
 
 if(data.extra) total+=data.extra;
+
 }
 
 const icon=total>=10800000?"🟢":"🔴";
@@ -323,6 +322,7 @@ const weekday=[
 ][d];
 
 result+=`${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
+
 }
 
 const embed=new EmbedBuilder()
@@ -331,6 +331,7 @@ const embed=new EmbedBuilder()
 .setDescription(`${member}\n\n${result}`);
 
 return i.reply({embeds:[embed]});
+
 }
 
 
@@ -361,7 +362,6 @@ return i.reply({content:"❌ Vào Game Đi!",ephemeral:true});
 let day=user.days[dayKey];
 
 if(!day){
-
 day=user.days[dayKey]={
 plate:"",
 sessions:[],
@@ -369,7 +369,6 @@ messageId:null,
 channelId:null,
 extra:0
 };
-
 }
 
 if(day.sessions.some(s=>!s.end))
@@ -389,6 +388,7 @@ saveDB();
 await sendOrUpdateEmbed(i.channel,member,user,dayKey,"Đang trực");
 
 return i.reply({content:"Onduty thành công",ephemeral:true});
+
 }
 
 
@@ -415,43 +415,6 @@ saveDB();
 await sendOrUpdateEmbed(i.channel,member,user,dayKey,"Off");
 
 return i.reply({content:"Đã offduty",ephemeral:true});
-}
-
-
-// ===== PENALTY =====
-
-if(i.commandName==="penalty"){
-
-if(!member.roles.cache.has(RESET_ROLE_ID))
-return i.reply({content:"Không có quyền",ephemeral:true});
-
-const u=i.options.getUser("user");
-
-const minutes=i.options.getInteger("minutes");
-
-const type=i.options.getString("type");
-
-const target=getUser(u.id);
-
-const ms=minutes*60000;
-
-if(type==="total") target.total+=ms;
-
-if(type==="day"){
-
-const day=target.days[dayKey];
-
-if(day) day.extra=(day.extra||0)+ms;
-
-}
-
-saveDB();
-
-const m=await i.guild.members.fetch(u.id);
-
-await sendOrUpdateEmbed(i.channel,m,target,dayKey,"Penalty");
-
-return i.reply(`Đã cộng ${minutes} phút cho ${u}`);
 
 }
 
