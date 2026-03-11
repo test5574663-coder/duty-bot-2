@@ -23,6 +23,7 @@ const WEEK_CHANNEL_ID = "1481104380739584060";
 
 // ===== KEEP ALIVE =====
 const PORT = process.env.PORT || 3000;
+
 http.createServer((req, res) => res.end("OK")).listen(PORT);
 
 setInterval(() => {
@@ -56,7 +57,11 @@ loadDB();
 
 // ===== TIME =====
 function nowVN() {
-  return new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Ho_Chi_Minh"}));
+  return new Date(
+    new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Ho_Chi_Minh"
+    })
+  );
 }
 
 function dateKeyVN(date = nowVN()) {
@@ -64,89 +69,97 @@ function dateKeyVN(date = nowVN()) {
 }
 
 function formatTime(ms) {
-  return new Date(ms).toLocaleTimeString("vi-VN",{hour12:false,timeZone:"Asia/Ho_Chi_Minh"});
+  return new Date(ms).toLocaleTimeString("vi-VN", {
+    hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh"
+  });
 }
 
 function diffText(ms) {
   const m = Math.floor(ms / 60000);
-  return `${Math.floor(m/60)} giờ ${m%60} phút`;
+  return `${Math.floor(m / 60)} giờ ${m % 60} phút`;
 }
 
 // ===== USER =====
-function getUser(id){
-  if(!db[id]) db[id]={total:0,days:{}};
+function getUser(id) {
+  if (!db[id]) db[id] = { total: 0, days: {} };
   return db[id];
 }
 
 // ===== EMBED =====
-function buildEmbed(member,user,dayKey,status){
+function buildEmbed(member, user, dayKey, status) {
+  const day = user.days[dayKey];
+  if (!day) return null;
 
-const day=user.days[dayKey];
-if(!day) return null;
+  let timeline = "";
+  let totalDay = 0;
+  const now = Date.now();
 
-let timeline="";
-let totalDay=0;
-const now=Date.now();
+  day.sessions.forEach(s => {
+    const end = s.end || now;
+    timeline += `${formatTime(s.start)} ➝ ${s.end ? formatTime(s.end) : "..."}\n`;
+    totalDay += end - s.start;
+  });
 
-day.sessions.forEach(s=>{
-const end=s.end||now;
-timeline+=`${formatTime(s.start)} ➝ ${s.end?formatTime(s.end):"..."}\n`;
-totalDay+=end-s.start;
-});
+  if (day.extra) totalDay += day.extra;
 
-if(day.extra) totalDay+=day.extra;
+  const isIntern = member.roles.cache.has(INTERN_ROLE_ID);
 
-const isIntern=member.roles.cache.has(INTERN_ROLE_ID);
+  return new EmbedBuilder()
+    .setColor(status.includes("Off") ? "#ff4d4f" : "#00ff9c")
+    .setAuthor({ name: "BẢNG ONDUTY" })
+    .setDescription(`**Tên Nhân Sự :** ${member}
 
-return new EmbedBuilder()
-.setColor(status.includes("Off")?"#ff4d4f":"#00ff9c")
-.setAuthor({name:"BẢNG ONDUTY"})
-.setDescription(`**Tên Nhân Sự :** ${member}
-
-**Biển Số :** ${day.plate||"Chưa nhập"}
+**Biển Số :** ${day.plate || "Chưa nhập"}
 
 **Thời Gian Onduty :**
-${timeline||"Chưa có"}
+${timeline || "Chưa có"}
 
 **Ngày Onduty :** ${dayKey}
 
 **Tổng Thời Gian Onduty :** ${diffText(totalDay)}
-${isIntern?`\n**Tổng Thời Gian Thực Tập :** ${diffText(user.total)}`:""}
+${isIntern ? `\n**Tổng Thời Gian Thực Tập :** ${diffText(user.total)}` : ""}
 
 **Trạng Thái Hoạt Động :** ${status}`);
 }
 
 // ===== SEND EMBED =====
-async function sendOrUpdateEmbed(channel,member,user,dayKey,status){
+async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
+  const day = user.days[dayKey];
+  const embed = buildEmbed(member, user, dayKey, status);
+  if (!embed) return;
 
-const day=user.days[dayKey];
-const embed=buildEmbed(member,user,dayKey,status);
-if(!embed) return;
+  if (day.messageId && day.channelId) {
+    try {
+      const ch = await client.channels.fetch(day.channelId);
+      const msg = await ch.messages.fetch(day.messageId);
 
-if(day.messageId && day.channelId){
-try{
-const ch=await client.channels.fetch(day.channelId);
-const msg=await ch.messages.fetch(day.messageId);
-if(msg){
-await msg.edit({embeds:[embed]});
-return;
-}
-}catch{}
-}
+      if (msg) {
+        await msg.edit({ embeds: [embed] });
+        return;
+      }
+    } catch {}
+  }
 
-const msg=await channel.send({embeds:[embed]});
-day.messageId=msg.id;
-day.channelId=channel.id;
-saveDB();
+  const msg = await channel.send({ embeds: [embed] });
+
+  day.messageId = msg.id;
+  day.channelId = channel.id;
+
+  saveDB();
 }
 
 // ===== COMMANDS =====
-const commands=[
+const commands = [
 
 new SlashCommandBuilder()
 .setName("onduty")
 .setDescription("Bắt đầu trực")
-.addStringOption(o=>o.setName("bienso").setDescription("Biển số").setRequired(true)),
+.addStringOption(o =>
+  o.setName("bienso")
+  .setDescription("Biển số")
+  .setRequired(true)
+),
 
 new SlashCommandBuilder()
 .setName("offduty")
@@ -155,256 +168,245 @@ new SlashCommandBuilder()
 new SlashCommandBuilder()
 .setName("thaybienso")
 .setDescription("Đổi biển số")
-.addStringOption(o=>o.setName("bienso").setDescription("Biển số mới").setRequired(true)),
+.addStringOption(o =>
+  o.setName("bienso")
+  .setDescription("Biển số mới")
+  .setRequired(true)
+),
 
 new SlashCommandBuilder()
-  .setName("penalty")
-  .setDescription("Cộng thời gian")
-  .addUserOption(o =>
-    o.setName("user")
-     .setDescription("Người cần cộng")
-     .setRequired(true)
+.setName("penalty")
+.setDescription("Cộng thời gian")
+.addUserOption(o =>
+  o.setName("user")
+  .setDescription("Người cần cộng")
+  .setRequired(true)
+)
+.addIntegerOption(o =>
+  o.setName("minutes")
+  .setDescription("Số phút")
+  .setRequired(true)
+)
+.addStringOption(o =>
+  o.setName("type")
+  .setDescription("Loại cộng")
+  .setRequired(true)
+  .addChoices(
+    { name: "Onduty ngày", value: "day" },
+    { name: "Thực tập tổng", value: "total" }
   )
-  .addIntegerOption(o =>
-    o.setName("minutes")
-     .setDescription("Số phút")
-     .setRequired(true)
-  )
-  .addStringOption(o =>
-    o.setName("type")
-     .setDescription("Loại cộng")
-     .setRequired(true)
-     .addChoices(
-       { name: "Onduty ngày", value: "day" },
-       { name: "Thực tập tổng", value: "total" }
-     )
-  )
+),
 
 new SlashCommandBuilder()
-  .setName("adjust")
-  .setDescription("Trừ thời gian")
-  .addUserOption(o =>
-    o.setName("user")
-     .setDescription("Người cần trừ")
-     .setRequired(true)
+.setName("adjust")
+.setDescription("Trừ thời gian")
+.addUserOption(o =>
+  o.setName("user")
+  .setDescription("Người cần trừ")
+  .setRequired(true)
+)
+.addIntegerOption(o =>
+  o.setName("minutes")
+  .setDescription("Số phút")
+  .setRequired(true)
+)
+.addStringOption(o =>
+  o.setName("type")
+  .setDescription("Loại trừ")
+  .setRequired(true)
+  .addChoices(
+    { name: "Onduty ngày", value: "day" },
+    { name: "Thực tập tổng", value: "total" }
   )
-  .addIntegerOption(o =>
-    o.setName("minutes")
-     .setDescription("Số phút")
-     .setRequired(true)
-  )
-  .addStringOption(o =>
-    o.setName("type")
-     .setDescription("Loại trừ")
-     .setRequired(true)
-     .addChoices(
-       { name: "Onduty ngày", value: "day" },
-       { name: "Thực tập tổng", value: "total" }
-     )
-  )
+),
 
 new SlashCommandBuilder()
-  .setName("forced_duty")
-  .setDescription("Cưỡng chế offduty")
-  .addUserOption(o =>
-    o.setName("user")
-     .setDescription("User cần off")
-     .setRequired(true)
-  )
+.setName("forced_duty")
+.setDescription("Cưỡng chế offduty")
+.addUserOption(o =>
+  o.setName("user")
+  .setDescription("User cần off")
+  .setRequired(true)
+),
 
 new SlashCommandBuilder()
 .setName("week")
 .setDescription("Xem chấm công tuần")
 
-].map(c=>c.toJSON());
+].map(c => c.toJSON());
 
 // ===== READY =====
-client.once("ready",async()=>{
-const rest=new REST({version:"10"}).setToken(TOKEN);
-await rest.put(Routes.applicationGuildCommands(client.user.id,GUILD_ID),{body:commands});
-console.log("Bot ready");
+client.once("ready", async () => {
+
+  const rest = new REST({ version: "10" }).setToken(TOKEN);
+
+  await rest.put(
+    Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+    { body: commands }
+  );
+
+  console.log("Bot ready");
 });
 
 // ===== COMMAND HANDLER =====
-client.on("interactionCreate",async i=>{
+client.on("interactionCreate", async i => {
 
-if(!i.isChatInputCommand()) return;
+  if (!i.isChatInputCommand()) return;
 
-const member=await i.guild.members.fetch(i.user.id);
-const user=getUser(member.id);
-const dayKey=dateKeyVN();
+  const member = await i.guild.members.fetch(i.user.id);
+  const user = getUser(member.id);
+  const dayKey = dateKeyVN();
 
-// ===== WEEK =====
-if(i.commandName==="week"){
+  // ===== WEEK =====
+  if (i.commandName === "week") {
 
-if(i.channel.id!==WEEK_CHANNEL_ID)
-return i.reply({content:"❌ Lệnh này chỉ dùng tại kênh chấm công",ephemeral:true});
+    if (i.channel.id !== WEEK_CHANNEL_ID)
+      return i.reply({
+        content: "❌ Lệnh này chỉ dùng tại kênh chấm công",
+        ephemeral: true
+      });
 
-const monday=new Date(nowVN());
-const day=monday.getDay()||7;
-monday.setDate(monday.getDate()-day+1);
+    const monday = new Date(nowVN());
+    const day = monday.getDay() || 7;
 
-let result="";
+    monday.setDate(monday.getDate() - day + 1);
 
-for(let d=0;d<7;d++){
+    let result = "";
 
-const date=new Date(monday);
-date.setDate(monday.getDate()+d);
+    for (let d = 0; d < 7; d++) {
 
-const key=dateKeyVN(date);
-const data=user.days[key];
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + d);
 
-let total=0;
+      const key = dateKeyVN(date);
+      const data = user.days[key];
 
-if(data){
-data.sessions.forEach(s=>{
-const end=s.end||Date.now();
-total+=end-s.start;
-});
-if(data.extra) total+=data.extra;
-}
+      let total = 0;
 
-const icon=total>=10800000?"🟢":"🔴";
+      if (data) {
 
-const weekday=["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ Nhật"][d];
+        data.sessions.forEach(s => {
+          const end = s.end || Date.now();
+          total += end - s.start;
+        });
 
-result+=`${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
-}
+        if (data.extra) total += data.extra;
+      }
 
-const embed=new EmbedBuilder()
-.setColor("#0099ff")
-.setTitle("BẢNG CHẤM CÔNG TUẦN")
-.setDescription(`${member}\n\n${result}`);
+      const icon = total >= 10800000 ? "🟢" : "🔴";
 
-return i.reply({embeds:[embed]});
-}
+      const weekday = [
+        "Thứ 2",
+        "Thứ 3",
+        "Thứ 4",
+        "Thứ 5",
+        "Thứ 6",
+        "Thứ 7",
+        "Chủ Nhật"
+      ][d];
 
-if(i.channel.id!==DUTY_CHANNEL_ID)
-return i.reply({content:"❌ Lệnh duty chỉ dùng tại kênh duty",ephemeral:true});
+      result += `${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
+    }
 
-// ===== ONDUTY =====
-if(i.commandName==="onduty"){
-const activities=member.presence?.activities||[];
-const playing=activities.some(a=>a.name?.toLowerCase().includes("gta"));
+    const embed = new EmbedBuilder()
+      .setColor("#0099ff")
+      .setTitle("BẢNG CHẤM CÔNG TUẦN")
+      .setDescription(`${member}\n\n${result}`);
 
-if(!playing) return i.reply({content:"❌ Vào Game Đi!",ephemeral:true});
+    return i.reply({ embeds: [embed] });
+  }
 
-let day=user.days[dayKey];
+  if (i.channel.id !== DUTY_CHANNEL_ID)
+    return i.reply({
+      content: "❌ Lệnh duty chỉ dùng tại kênh duty",
+      ephemeral: true
+    });
 
-if(!day){
-day=user.days[dayKey]={plate:"",sessions:[],messageId:null,channelId:null,extra:0};
-}
+  // ===== ONDUTY =====
+  if (i.commandName === "onduty") {
 
-if(day.sessions.some(s=>!s.end))
-return i.reply({content:"❌ Bạn đang onduty rồi",ephemeral:true});
+    const activities = member.presence?.activities || [];
 
-const plate=i.options.getString("bienso");
-day.plate=plate;
+    const playing = activities.some(a =>
+      a.name?.toLowerCase().includes("gta")
+    );
 
-day.sessions.push({start:Date.now(),end:null});
-saveDB();
+    if (!playing)
+      return i.reply({
+        content: "❌ Vào Game Đi!",
+        ephemeral: true
+      });
 
-await sendOrUpdateEmbed(i.channel,member,user,dayKey,"Đang trực");
-return i.reply({content:"Onduty thành công",ephemeral:true});
-}
+    let day = user.days[dayKey];
 
-// ===== OFFDUTY =====
-if(i.commandName==="offduty"){
-const day=user.days[dayKey];
-if(!day) return i.reply({content:"Bạn chưa onduty",ephemeral:true});
+    if (!day) {
 
-const last=day.sessions.find(s=>!s.end);
-if(!last) return i.reply({content:"Bạn đã off rồi",ephemeral:true});
+      day = user.days[dayKey] = {
+        plate: "",
+        sessions: [],
+        messageId: null,
+        channelId: null,
+        extra: 0
+      };
+    }
 
-last.end=Date.now();
-user.total+=last.end-last.start;
-saveDB();
+    if (day.sessions.some(s => !s.end))
+      return i.reply({
+        content: "❌ Bạn đang onduty rồi",
+        ephemeral: true
+      });
 
-await sendOrUpdateEmbed(i.channel,member,user,dayKey,"Off");
-return i.reply({content:"Đã offduty",ephemeral:true});
-}
+    const plate = i.options.getString("bienso");
 
-// ===== PENALTY =====
-if(i.commandName==="penalty"){
+    day.plate = plate;
 
-if(!member.roles.cache.has(RESET_ROLE_ID))
-return i.reply({content:"Không có quyền",ephemeral:true});
+    day.sessions.push({
+      start: Date.now(),
+      end: null
+    });
 
-const u=i.options.getUser("user");
-const minutes=i.options.getInteger("minutes");
-const type=i.options.getString("type");
+    saveDB();
 
-const target=getUser(u.id);
-const ms=minutes*60000;
+    await sendOrUpdateEmbed(i.channel, member, user, dayKey, "Đang trực");
 
-if(type==="total") target.total+=ms;
+    return i.reply({
+      content: "Onduty thành công",
+      ephemeral: true
+    });
+  }
 
-if(type==="day"){
-const day=target.days[dayKey];
-if(day) day.extra=(day.extra||0)+ms;
-}
+  // ===== OFFDUTY =====
+  if (i.commandName === "offduty") {
 
-saveDB();
+    const day = user.days[dayKey];
 
-const m=await i.guild.members.fetch(u.id);
-await sendOrUpdateEmbed(i.channel,m,target,dayKey,"Penalty");
+    if (!day)
+      return i.reply({
+        content: "Bạn chưa onduty",
+        ephemeral: true
+      });
 
-return i.reply(`Đã cộng ${minutes} phút cho ${u}`);
-}
+    const last = day.sessions.find(s => !s.end);
 
-// ===== ADJUST =====
-if(i.commandName==="adjust"){
+    if (!last)
+      return i.reply({
+        content: "Bạn đã off rồi",
+        ephemeral: true
+      });
 
-if(!member.roles.cache.has(RESET_ROLE_ID))
-return i.reply({content:"Không có quyền",ephemeral:true});
+    last.end = Date.now();
 
-const u=i.options.getUser("user");
-const minutes=i.options.getInteger("minutes");
-const type=i.options.getString("type");
+    user.total += last.end - last.start;
 
-const target=getUser(u.id);
-const ms=minutes*60000;
+    saveDB();
 
-if(type==="total") target.total=Math.max(0,target.total-ms);
+    await sendOrUpdateEmbed(i.channel, member, user, dayKey, "Off");
 
-if(type==="day"){
-const day=target.days[dayKey];
-if(day) day.extra=Math.max(0,(day.extra||0)-ms);
-}
-
-saveDB();
-
-const m=await i.guild.members.fetch(u.id);
-await sendOrUpdateEmbed(i.channel,m,target,dayKey,"Adjust");
-
-return i.reply(`Đã trừ ${minutes} phút của ${u}`);
-}
-
-// ===== FORCE =====
-if(i.commandName==="forced_duty"){
-
-if(!member.roles.cache.has(RESET_ROLE_ID))
-return i.reply({content:"Không có quyền",ephemeral:true});
-
-const u=i.options.getUser("user");
-const target=getUser(u.id);
-
-const day=target.days[dayKey];
-if(!day) return i.reply("User chưa onduty");
-
-const last=day.sessions.find(s=>!s.end);
-if(!last) return i.reply("User đã off");
-
-last.end=Date.now();
-target.total+=last.end-last.start;
-saveDB();
-
-const m=await i.guild.members.fetch(u.id);
-await sendOrUpdateEmbed(i.channel,m,target,dayKey,"Force Off");
-
-return i.reply(`Đã cưỡng chế offduty ${u}`);
-}
+    return i.reply({
+      content: "Đã offduty",
+      ephemeral: true
+    });
+  }
 
 });
-
 client.login(TOKEN);
