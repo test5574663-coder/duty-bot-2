@@ -88,6 +88,7 @@ function getUser(id) {
 
 // ===== EMBED =====
 function buildEmbed(member, user, dayKey, status) {
+
   const day = user.days[dayKey];
   if (!day) return null;
 
@@ -125,12 +126,15 @@ ${isIntern ? `\n**Tổng Thời Gian Thực Tập :** ${diffText(user.total)}` :
 
 // ===== SEND EMBED =====
 async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
+
   const day = user.days[dayKey];
   const embed = buildEmbed(member, user, dayKey, status);
   if (!embed) return;
 
   if (day.messageId && day.channelId) {
+
     try {
+
       const ch = await client.channels.fetch(day.channelId);
       const msg = await ch.messages.fetch(day.messageId);
 
@@ -138,6 +142,7 @@ async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
         await msg.edit({ embeds: [embed] });
         return;
       }
+
     } catch {}
   }
 
@@ -296,13 +301,7 @@ client.on("interactionCreate", async i => {
       const icon = total >= 10800000 ? "🟢" : "🔴";
 
       const weekday = [
-        "Thứ 2",
-        "Thứ 3",
-        "Thứ 4",
-        "Thứ 5",
-        "Thứ 6",
-        "Thứ 7",
-        "Chủ Nhật"
+        "Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ Nhật"
       ][d];
 
       result += `${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
