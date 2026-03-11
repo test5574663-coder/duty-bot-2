@@ -248,7 +248,12 @@ new SlashCommandBuilder()
 
 new SlashCommandBuilder()
 .setName("week")
-.setDescription("Xem chấm công tuần")
+.setDescription("Xem chấm công tuần của nhân sự")
+.addUserOption(o =>
+  o.setName("user")
+  .setDescription("Nhân sự cần kiểm tra")
+  .setRequired(true)
+)
 
 ].map(c=>c.toJSON());
 
@@ -285,7 +290,15 @@ const dayKey=dateKeyVN();
 if(i.commandName==="week"){
 
 if(i.channel.id!==WEEK_CHANNEL_ID)
-return i.reply({content:"❌ Chỉ dùng ở kênh week",ephemeral:true});
+return i.reply({content:"❌ Chỉ dùng ở kênh chấm công",ephemeral:true});
+
+const targetUser=i.options.getUser("user");
+
+const memberTarget=await i.guild.members.fetch(targetUser.id);
+
+const data=getUser(targetUser.id);
+
+// ===== TÍNH TUẦN =====
 
 const monday=new Date(nowVN());
 const day=monday.getDay()||7;
@@ -300,25 +313,32 @@ const date=new Date(monday);
 date.setDate(monday.getDate()+d);
 
 const key=dateKeyVN(date);
-const data=user.days[key];
+
+const dayData=data.days[key];
 
 let total=0;
 
-if(data){
+if(dayData){
 
-data.sessions.forEach(s=>{
+dayData.sessions.forEach(s=>{
 const end=s.end||Date.now();
 total+=end-s.start;
 });
 
-if(data.extra) total+=data.extra;
+if(dayData.extra) total+=dayData.extra;
 
 }
 
 const icon=total>=10800000?"🟢":"🔴";
 
 const weekday=[
-"Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ Nhật"
+"Thứ 2",
+"Thứ 3",
+"Thứ 4",
+"Thứ 5",
+"Thứ 6",
+"Thứ 7",
+"Chủ Nhật"
 ][d];
 
 result+=`${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
@@ -326,14 +346,20 @@ result+=`${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
 }
 
 const embed=new EmbedBuilder()
+
 .setColor("#0099ff")
+
 .setTitle("BẢNG CHẤM CÔNG TUẦN")
-.setDescription(`${member}\n\n${result}`);
+
+.setDescription(
+`**Nhân sự:** ${memberTarget}
+
+${result}`
+);
 
 return i.reply({embeds:[embed]});
 
 }
-
 
 // ===== DUTY CHANNEL CHECK =====
 
