@@ -402,7 +402,7 @@ return i.reply({content:"Đã offduty",ephemeral:true});
 
 if(i.commandName==="penalty"){
 
-await i.deferReply({ephemeral:true});
+await i.deferReply();
 
 if(!member.roles.cache.has(DEV_ROLE_ID))
 return i.editReply("❌ Không có quyền");
@@ -440,7 +440,9 @@ const m=await i.guild.members.fetch(u.id);
 
 await sendOrUpdateEmbed(i.channel,m,target,today,"Penalty");
 
-return i.editReply(`✅ Đã cộng ${minutes} phút cho ${u}`);
+return i.editReply({
+content:`🟢 ${member} đã cộng ${minutes} phút cho ${u}`
+});
 }
 
 
@@ -448,7 +450,7 @@ return i.editReply(`✅ Đã cộng ${minutes} phút cho ${u}`);
 
 if(i.commandName==="adjust"){
 
-await i.deferReply({ephemeral:true});
+await i.deferReply();
 
 if(!member.roles.cache.has(DEV_ROLE_ID))
 return i.editReply("❌ Không có quyền");
@@ -478,7 +480,9 @@ const m=await i.guild.members.fetch(u.id);
 
 await sendOrUpdateEmbed(i.channel,m,target,today,"Adjust");
 
-return i.editReply(`✅ Đã trừ ${minutes} phút của ${u}`);
+return i.editReply({
+content:`🟠 ${member} đã trừ ${minutes} phút của ${u}`
+});
 }
 
 
@@ -515,7 +519,7 @@ const m=await i.guild.members.fetch(u.id);
 
 await sendOrUpdateEmbed(i.channel,m,target,today,"Force Off");
 
-return i.editReply(`⚠️ Đã cưỡng chế offduty ${u}`);
+return i.editReply(`🔴 Đã cưỡng chế offduty ${u}`);
 }
 
 }catch(err){
