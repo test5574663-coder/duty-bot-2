@@ -274,6 +274,8 @@ client.on("interactionCreate", async i => {
 
   if (i.channel.id !== DUTY_CHANNEL_ID)
     return i.reply({ content: "❌ Lệnh duty chỉ dùng tại kênh duty", ephemeral: true });
-
   // (toàn bộ logic onduty / offduty / penalty / adjust / forced_duty giữ nguyên)
 });
+
+//=========Login=========
+client.login(TOKEN);
