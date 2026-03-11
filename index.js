@@ -48,24 +48,33 @@ let db = {};
 function loadDB() {
   if (fs.existsSync(DB_FILE)) db = JSON.parse(fs.readFileSync(DB_FILE));
 }
+
 function saveDB() {
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
 }
+
 loadDB();
 
 // ===== TIME VN =====
 function nowVN() {
-  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  return new Date(
+    new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Ho_Chi_Minh"
+    })
+  );
 }
-function dateKeyVN() {
-  return nowVN().toLocaleDateString("vi-VN");
+
+function dateKeyVN(date = nowVN()) {
+  return date.toLocaleDateString("vi-VN");
 }
+
 function formatTime(ms) {
   return new Date(ms).toLocaleTimeString("vi-VN", {
     hour12: false,
     timeZone: "Asia/Ho_Chi_Minh"
   });
 }
+
 function diffText(ms) {
   const m = Math.floor(ms / 60000);
   return `${Math.floor(m / 60)} giờ ${m % 60} phút`;
@@ -79,6 +88,7 @@ function getUser(id) {
 
 // ===== EMBED =====
 function buildEmbed(member, user, dayKey, status) {
+
   const day = user.days[dayKey];
   if (!day) return null;
 
@@ -118,14 +128,17 @@ ${isIntern ? `\n**Tổng Thời Gian Thực Tập :** ${diffText(user.total)}` :
 
 // ===== SEND / UPDATE =====
 async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
+
   const day = user.days[dayKey];
   const embed = buildEmbed(member, user, dayKey, status);
+
   if (!embed) return;
 
   if (day.messageId && day.channelId) {
     try {
       const ch = await client.channels.fetch(day.channelId);
       const msg = await ch.messages.fetch(day.messageId);
+
       if (msg) {
         await msg.edit({ embeds: [embed] });
         return;
@@ -134,8 +147,10 @@ async function sendOrUpdateEmbed(channel, member, user, dayKey, status) {
   }
 
   const msg = await channel.send({ embeds: [embed] });
+
   day.messageId = msg.id;
   day.channelId = channel.id;
+
   saveDB();
 }
 
@@ -203,13 +218,20 @@ new SlashCommandBuilder()
 
 // ===== READY =====
 client.once("ready", async () => {
+
   const rest = new REST({ version: "10" }).setToken(TOKEN);
-  await rest.put(Routes.applicationGuildCommands(client.user.id, GUILD_ID), { body: commands });
-  console.log("Bot ready");
+
+  await rest.put(
+    Routes.applicationGuildCommands(client.user.id, GUILD_ID),
+    { body: commands }
+  );
+
+  console.log("BOT READY");
 });
 
 // ===== COMMAND HANDLER =====
 client.on("interactionCreate", async i => {
+
   if (!i.isChatInputCommand()) return;
 
   const member = await i.guild.members.fetch(i.user.id);
@@ -220,7 +242,10 @@ client.on("interactionCreate", async i => {
   if (i.commandName === "week") {
 
     if (i.channel.id !== WEEK_CHANNEL_ID)
-      return i.reply({ content: "❌ Có tuổi rồi à? Đây không phải kênh chấm công", ephemeral: true });
+      return i.reply({
+        content: "❌ Lệnh này chỉ dùng tại kênh chấm công",
+        ephemeral: true
+      });
 
     const monday = new Date(nowVN());
     const day = monday.getDay() || 7;
@@ -233,7 +258,7 @@ client.on("interactionCreate", async i => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + d);
 
-      const key = date.toLocaleDateString("vi-VN");
+      const key = dateKeyVN(date);
       const data = user.days[key];
 
       let total = 0;
@@ -264,10 +289,12 @@ client.on("interactionCreate", async i => {
     return i.reply({ embeds: [embed] });
   }
 
+  // ===== DUTY CHANNEL CHECK =====
   if (i.channel.id !== DUTY_CHANNEL_ID)
-    return i.reply({ content: "❌ Đây đéo phải kênh Onduty", ephemeral: true });
+    return i.reply({
+      content: "❌ Lệnh duty chỉ dùng tại kênh duty",
+      ephemeral: true
+    });
 
-  // (phần duty của bạn giữ nguyên)
+  // (toàn bộ logic duty của bạn giữ nguyên bên dưới)
 });
-
-client.login(TOKEN);
