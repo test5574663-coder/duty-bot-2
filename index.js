@@ -361,7 +361,62 @@ const member=await i.guild.members.fetch(i.user.id);
 const user=getUser(member.id);
 const dayKey=dateKeyVN();
 
+// ===== WEEK =====
 
+if(i.commandName==="week"){
+
+if(i.channel.id!==WEEK_CHANNEL_ID)
+return i.reply({content:"❌ Chỉ dùng ở kênh chấm công",ephemeral:true});
+
+const targetUser=i.options.getUser("user");
+const memberTarget=await i.guild.members.fetch(targetUser.id);
+const data=getUser(targetUser.id);
+
+const monday=new Date(nowVN());
+const day=monday.getDay()||7;
+monday.setDate(monday.getDate()-day+1);
+
+let result="";
+
+for(let d=0;d<7;d++){
+
+const date=new Date(monday);
+date.setDate(monday.getDate()+d);
+
+const key=dateKeyVN(date);
+const dayData=data.days[key];
+
+let total=0;
+
+if(dayData){
+
+dayData.sessions.forEach(s=>{
+const end=s.end||Date.now();
+total+=end-s.start;
+});
+
+if(dayData.extra) total+=dayData.extra;
+
+}
+
+const icon=total>=10800000?"🟢":"🔴";
+
+const weekday=[
+"Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ Nhật"
+][d];
+
+result+=`${icon} **${weekday} (${key})** — ${diffText(total)}\n`;
+
+}
+
+const embed=new EmbedBuilder()
+.setColor("#0099ff")
+.setTitle("BẢNG CHẤM CÔNG TUẦN")
+.setDescription(`**Nhân sự:** ${memberTarget}\n\n${result}`);
+
+return i.reply({embeds:[embed]});
+}
+  
 // ===== ONDUTY =====
 
 if(i.commandName==="onduty"){
