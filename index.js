@@ -349,16 +349,18 @@ const targetUser=i.options.getUser("user");
 const memberTarget=await i.guild.members.fetch(targetUser.id);
 const data=getUser(targetUser.id);
 
-const monday=new Date(nowVN());
-const day=monday.getDay()||7;
-monday.setDate(monday.getDate()-day+1);
+const monday = nowVN();
+const day = monday.getDay() || 7;
+monday.setDate(monday.getDate() - day + 1);
+monday.setHours(0,0,0,0);;
 
 let result="";
 
 for(let d=0;d<7;d++){
 
-const date=new Date(monday);
-date.setDate(monday.getDate()+d);
+const date = new Date(monday);
+date.setDate(monday.getDate() + d);
+date.setHours(0,0,0,0);
 
 const key=dateKeyVN(date);
 const dayData=data.days[key];
