@@ -470,6 +470,28 @@ await sendOrUpdateEmbed(i.channel,member,user,dayKey,"Đang trực");
 return i.reply({content:"Onduty thành công",ephemeral:true});
 }
 
+// ===== THAY BIEN SO =====
+
+if(i.commandName==="thaybienso"){
+
+const open=findOpenSession(user);
+
+if(!open)
+return i.reply({content:"❌ Mày chưa onduty",ephemeral:true});
+
+const plate=i.options.getString("bienso");
+
+open.day.plate=plate;
+
+saveDB();
+
+await sendOrUpdateEmbed(i.channel,member,user,open.dayKey,"Đang trực");
+
+return i.reply({
+content:`🟢 Đã đổi biển số thành **${plate}**`,
+ephemeral:true
+});
+}
 
 // ===== OFFDUTY =====
 
