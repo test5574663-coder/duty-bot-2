@@ -105,17 +105,10 @@ return db[id];
 // ===== FIND OPEN SESSION =====
 
 function findOpenSession(user){
-
 for(const [dayKey,day] of Object.entries(user.days||{})){
-
 const session=day.sessions?.find(s=>!s.end);
-
-if(session){
-return {dayKey,day,session};
+if(session) return {dayKey,day,session};
 }
-
-}
-
 return null;
 }
 
@@ -189,7 +182,9 @@ await msg.edit({embeds:[embed]});
 return;
 }
 
-}catch{}
+}catch{
+day.messageId=null;
+}
 
 }
 
@@ -271,84 +266,6 @@ console.log("BOT READY");
 });
 
 
-// ===== AUTO OFF WHEN LEAVE GAME =====
-
-client.on("presenceUpdate",async(oldPresence,newPresence)=>{
-
-try{
-
-if(!newPresence) return;
-
-const member=newPresence.member;
-if(!member) return;
-
-const user=getUser(member.id);
-
-const open=findOpenSession(user);
-
-if(!open) return;
-
-const activities=newPresence.activities||[];
-
-const playing=activities.some(a=>a.name?.toLowerCase().includes("gta"));
-
-if(!playing){
-
-open.session.end=Date.now();
-
-user.total+=open.session.end-open.session.start;
-
-saveDB();
-
-const ch=await client.channels.fetch(open.day.channelId||DUTY_CHANNEL_ID);
-
-await sendOrUpdateEmbed(ch,member,user,open.dayKey,"Thoát Game (Alt Lấy Lợi Thế)");
-
-}
-
-}catch{}
-});
-
-
-// ===== AUTO OFF 23:59 =====
-
-setInterval(async()=>{
-
-const now=nowVN();
-
-if(now.getHours()===23 && now.getMinutes()===59){
-
-for(const id of Object.keys(db)){
-
-const user=getUser(id);
-
-const open=findOpenSession(user);
-
-if(!open) continue;
-
-open.session.end=Date.now();
-
-user.total+=open.session.end-open.session.start;
-
-const guild=client.guilds.cache.get(GUILD_ID);
-if(!guild) continue;
-
-const member=await guild.members.fetch(id).catch(()=>null);
-if(!member) continue;
-
-const ch=await client.channels.fetch(open.day.channelId||DUTY_CHANNEL_ID);
-
-await sendOrUpdateEmbed(ch,member,user,open.dayKey,"Auto Off (Qua Ngày Mới)");
-
-}
-
-saveDB();
-
-}
-
-},60000);
-
-
 // ===== COMMAND HANDLER =====
 
 client.on("interactionCreate",async i=>{
@@ -361,9 +278,12 @@ const member=await i.guild.members.fetch(i.user.id);
 const user=getUser(member.id);
 const dayKey=dateKeyVN();
 
+
 // ===== WEEK =====
 
 if(i.commandName==="week"){
+
+await i.deferReply();
 
 if(i.channel.id!==WEEK_CHANNEL_ID)
 return i.reply({content:"❌ Chỉ dùng ở kênh chấm công",ephemeral:true});
@@ -389,14 +309,12 @@ const dayData=data.days[key];
 let total=0;
 
 if(dayData){
-
 dayData.sessions.forEach(s=>{
 const end=s.end||Date.now();
 total+=end-s.start;
 });
 
 if(dayData.extra) total+=dayData.extra;
-
 }
 
 const icon=total>=10800000?"🟢":"🔴";
@@ -414,9 +332,109 @@ const embed=new EmbedBuilder()
 .setTitle("BẢNG CHẤM CÔNG TUẦN")
 .setDescription(`**Nhân sự:** ${memberTarget}\n\n${result}`);
 
-return i.reply({embeds:[embed]});
+return i.editReply({embeds:[embed]});
 }
-  
+
+
+// ===== ADMIN COMMANDS =====
+
+if(i.commandName==="penalty"){
+
+if(!member.roles.cache.has(DEV_ROLE_ID))
+return i.reply({content:"❌ Không có quyền",ephemeral:true});
+
+const u=i.options.getUser("user");
+const minutes=i.options.getInteger("minutes");
+const type=i.options.getString("type");
+
+const target=getUser(u.id);
+const ms=minutes*60000;
+const today=dateKeyVN();
+
+if(type==="total") target.total+=ms;
+
+if(type==="day"){
+
+if(!target.days[today]){
+target.days[today]={plate:"",sessions:[],messageId:null,channelId:null,extra:0};
+}
+
+target.days[today].extra=(target.days[today].extra||0)+ms;
+}
+
+saveDB();
+
+const m=await i.guild.members.fetch(u.id);
+
+await sendOrUpdateEmbed(i.channel,m,target,today,"Penalty");
+
+return i.reply(`🟢 ${member} đã cộng ${minutes} phút cho ${u}`);
+}
+
+
+if(i.commandName==="adjust"){
+
+if(!member.roles.cache.has(DEV_ROLE_ID))
+return i.reply({content:"❌ Không có quyền",ephemeral:true});
+
+const u=i.options.getUser("user");
+const minutes=i.options.getInteger("minutes");
+const type=i.options.getString("type");
+
+const target=getUser(u.id);
+const ms=minutes*60000;
+const today=dateKeyVN();
+
+if(type==="total")
+target.total=Math.max(0,target.total-ms);
+
+if(type==="day" && target.days[today]){
+target.days[today].extra=Math.max(0,(target.days[today].extra||0)-ms);
+}
+
+saveDB();
+
+const m=await i.guild.members.fetch(u.id);
+
+await sendOrUpdateEmbed(i.channel,m,target,today,"Adjust");
+
+return i.reply(`🟠 ${member} đã trừ ${minutes} phút của ${u}`);
+}
+
+
+if(i.commandName==="forceoff"){
+
+if(!member.roles.cache.has(DEV_ROLE_ID))
+return i.reply({content:"❌ Không có quyền",ephemeral:true});
+
+const u=i.options.getUser("user");
+const target=getUser(u.id);
+
+const today=dateKeyVN();
+const day=target.days[today];
+
+if(!day)
+return i.reply("User chưa onduty");
+
+const last=day.sessions.find(s=>!s.end);
+
+if(!last)
+return i.reply("User đã off");
+
+last.end=Date.now();
+
+target.total+=last.end-last.start;
+
+saveDB();
+
+const m=await i.guild.members.fetch(u.id);
+
+await sendOrUpdateEmbed(i.channel,m,target,today,"Force Off");
+
+return i.reply(`🔴 Đã cưỡng chế offduty ${u}`);
+}
+
+
 // ===== ONDUTY =====
 
 if(i.commandName==="onduty"){
@@ -424,7 +442,7 @@ if(i.commandName==="onduty"){
 if(findOpenSession(user))
 return i.reply({content:"❌ Mày đang onduty rồi",ephemeral:true});
 
-const activities=member.presence?.activities||[];
+const activities = member.presence?.activities ?? [];
 const playing=activities.some(a=>a.name?.toLowerCase().includes("gta"));
 
 if(!playing)
@@ -433,13 +451,7 @@ return i.reply({content:"❌ Mày chưa vào game!",ephemeral:true});
 let day=user.days[dayKey];
 
 if(!day){
-day=user.days[dayKey]={
-plate:"",
-sessions:[],
-messageId:null,
-channelId:null,
-extra:0
-};
+day=user.days[dayKey]={plate:"",sessions:[],messageId:null,channelId:null,extra:0};
 }
 
 const plate=i.options.getString("bienso");
@@ -485,7 +497,6 @@ console.error(err);
 
 if(i.deferred||i.replied)
 await i.editReply("❌ Lỗi bot");
-
 else
 await i.reply({content:"❌ Lỗi bot",ephemeral:true});
 
