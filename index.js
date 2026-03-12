@@ -265,6 +265,63 @@ console.log("BOT READY");
 
 });
 
+// ===== AUTO OFF WHEN LEAVE GAME  =====
+
+client.on("presenceUpdate", async (oldPresence, newPresence) => {
+
+try{
+
+if(!newPresence) return;
+
+const member = newPresence.member;
+if(!member) return;
+
+// lấy user trong DB
+const user = getUser(member.id);
+
+// tìm session đang trực
+const open = findOpenSession(user);
+
+if(!open) return;
+
+// lấy activity discord
+const activities = newPresence.activities ?? [];
+
+// kiểm tra xem còn đang chơi server không
+const playingServer = activities.some(a =>
+a.name && a.name.toLowerCase().includes("gta5vn")
+);
+
+// nếu KHÔNG còn activity GTA5VN => offduty
+if(!playingServer){
+
+open.session.end = Date.now();
+
+user.total += open.session.end - open.session.start;
+
+saveDB();
+
+// update embed
+const ch = await client.channels.fetch(open.day.channelId || DUTY_CHANNEL_ID);
+
+await sendOrUpdateEmbed(
+ch,
+member,
+user,
+open.dayKey,
+"Thoát Game (Auto OffDuty)"
+);
+
+console.log(`${member.user.tag} Đã Offduty (Alt Lấy Lợi Thế)`);
+
+}
+
+}catch(err){
+console.log("Presence Error:", err);
+}
+
+});
+
 
 // ===== COMMAND HANDLER =====
 
