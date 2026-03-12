@@ -295,6 +295,18 @@ a.name && a.name.toLowerCase().includes("gta5vn")
 // nếu KHÔNG còn activity GTA5VN => offduty
 if(!playingServer){
 
+// đợi 10s kiểm tra lại
+await new Promise(r => setTimeout(r,10000));
+
+const memberCheck = await member.fetch();
+const activities = memberCheck.presence?.activities ?? [];
+
+const stillPlaying = activities.some(a =>
+a.name && a.name.toLowerCase().includes("gta5vn")
+);
+
+if(stillPlaying) return;
+
 open.session.end = Date.now();
 
 user.total += open.session.end - open.session.start;
