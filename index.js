@@ -27,7 +27,7 @@ const DUTY_CHANNEL_ID = "1481300483783000236";
 const WEEK_CHANNEL_ID = "1480583086797361272";
 
 
-// ===== KEEP ALIVE (RENDER) =====
+// ===== KEEP ALIVE =====
 
 const PORT = process.env.PORT || 3000;
 
@@ -133,13 +133,11 @@ let totalDay=0;
 const now=Date.now();
 
 day.sessions.forEach(s=>{
-
 const end=s.end||now;
 
 timeline+=`${formatTime(s.start)} ➝ ${s.end?formatTime(s.end):"..."}\n`;
 
 totalDay+=end-s.start;
-
 });
 
 if(day.extra) totalDay+=day.extra;
@@ -170,7 +168,7 @@ ${isIntern?`\n**Tổng Thực Tập :** ${diffText(user.total)}`:""}
 }
 
 
-// ===== SEND OR UPDATE EMBED =====
+// ===== SEND / UPDATE EMBED =====
 
 async function sendOrUpdateEmbed(channel,member,user,dayKey,status){
 
@@ -218,9 +216,41 @@ new SlashCommandBuilder()
 .setDescription("Kết thúc trực"),
 
 new SlashCommandBuilder()
+.setName("thaybienso")
+.setDescription("Đổi biển số")
+.addStringOption(o=>o.setName("bienso").setDescription("Biển số mới").setRequired(true)),
+
+new SlashCommandBuilder()
+.setName("penalty")
+.setDescription("Cộng thời gian")
+.addUserOption(o=>o.setName("user").setDescription("User").setRequired(true))
+.addIntegerOption(o=>o.setName("minutes").setDescription("Phút").setRequired(true))
+.addStringOption(o=>o.setName("type").setDescription("Loại").setRequired(true)
+.addChoices(
+{name:"Onduty ngày",value:"day"},
+{name:"Thực tập tổng",value:"total"}
+)),
+
+new SlashCommandBuilder()
+.setName("adjust")
+.setDescription("Trừ thời gian")
+.addUserOption(o=>o.setName("user").setDescription("User").setRequired(true))
+.addIntegerOption(o=>o.setName("minutes").setDescription("Phút").setRequired(true))
+.addStringOption(o=>o.setName("type").setDescription("Loại").setRequired(true)
+.addChoices(
+{name:"Onduty ngày",value:"day"},
+{name:"Thực tập tổng",value:"total"}
+)),
+
+new SlashCommandBuilder()
+.setName("forceoff")
+.setDescription("Cưỡng chế offduty")
+.addUserOption(o=>o.setName("user").setDescription("User").setRequired(true)),
+
+new SlashCommandBuilder()
 .setName("week")
 .setDescription("Xem chấm công tuần")
-.addUserOption(o=>o.setName("user").setDescription("User").setRequired(true))
+.addUserOption(o=>o.setName("user").setDescription("Nhân sự").setRequired(true))
 
 ].map(c=>c.toJSON());
 
@@ -272,7 +302,7 @@ saveDB();
 
 const ch=await client.channels.fetch(open.day.channelId||DUTY_CHANNEL_ID);
 
-await sendOrUpdateEmbed(ch,member,user,open.dayKey,"Auto Off (Thoát Game)");
+await sendOrUpdateEmbed(ch,member,user,open.dayKey,"Thoát Game (Alt Lấy Lợi Thế)");
 
 }
 
@@ -308,7 +338,7 @@ if(!member) continue;
 
 const ch=await client.channels.fetch(open.day.channelId||DUTY_CHANNEL_ID);
 
-await sendOrUpdateEmbed(ch,member,user,open.dayKey,"Auto Off (Hết Ngày)");
+await sendOrUpdateEmbed(ch,member,user,open.dayKey,"Auto Off (Qua Ngày Mới)");
 
 }
 
@@ -337,13 +367,13 @@ const dayKey=dateKeyVN();
 if(i.commandName==="onduty"){
 
 if(findOpenSession(user))
-return i.reply({content:"❌ Bạn đang onduty rồi",ephemeral:true});
+return i.reply({content:"❌ Mày đang onduty rồi",ephemeral:true});
 
 const activities=member.presence?.activities||[];
 const playing=activities.some(a=>a.name?.toLowerCase().includes("gta"));
 
 if(!playing)
-return i.reply({content:"❌ Vào Game Đi!",ephemeral:true});
+return i.reply({content:"❌ Mày chưa vào game!",ephemeral:true});
 
 let day=user.days[dayKey];
 
@@ -381,7 +411,7 @@ if(i.commandName==="offduty"){
 const open=findOpenSession(user);
 
 if(!open)
-return i.reply({content:"Bạn chưa onduty",ephemeral:true});
+return i.reply({content:"Mày chưa onduty",ephemeral:true});
 
 open.session.end=Date.now();
 
