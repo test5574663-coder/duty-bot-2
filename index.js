@@ -53,7 +53,7 @@ GatewayIntentBits.GuildPresences
 
 // ===== DATABASE =====
 
-const DB_FILE="./duty.json";
+const DB_FILE="./data.json";
 let db={};
 
 function loadDB(){
